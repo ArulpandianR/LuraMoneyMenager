@@ -40,6 +40,8 @@ class HomeActivity : AppCompatActivity() {
     var debited = 0.0
     var credited = 0.0
     var tranactionText = ""
+    var startDate = "1/9/2019"
+    var endDate = "24/9/2019"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,8 +92,10 @@ class HomeActivity : AppCompatActivity() {
             if (cardMatcher.find()) {
                 cardName = body.substring(cardMatcher.start(), cardMatcher.end())
             }
-            if (!amount.isNullOrEmpty() && !bankName.isNullOrEmpty() &&
-                (body.contains("debited") || body.contains("debited"))) {
+
+            if (!amount.isNullOrEmpty() && !bankName.isNullOrEmpty() && address.contains("HDFCBK") &&
+                isValid(calendar.time) && (body.contains("credited") || body.contains("debited"))
+            ) {
                 val re = Regex("[^0-9.]")
                 var amountDouble = re.replace(amount.replace("Rs.", ""), "")
                 if (body.contains("debited")) {
@@ -336,6 +340,12 @@ class HomeActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+    }
+
+    fun isValid(giveDate: Date): Boolean {
+        var start = SimpleDateFormat("dd/MM/yyyy").parse(startDate);
+        var end = SimpleDateFormat("dd/MM/yyyy").parse(endDate);
+        return giveDate.after(start) && giveDate.before(end)
     }
 }
 
