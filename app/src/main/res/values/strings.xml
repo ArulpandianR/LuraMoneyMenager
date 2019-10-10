@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">LuraMoneyMenager</string>
+
+    <string name="dateTimeRangePickerDoneText">Done</string>
+    <string name="dateTimeRangePickerStartText">Start Date</string>
+    <string name="dateTimeRangePickerEndText">End Date</string>
 </resources>

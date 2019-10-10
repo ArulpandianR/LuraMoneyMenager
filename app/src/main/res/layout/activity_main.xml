@@ -4,20 +4,65 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/traction"
-        android:layout_width="wrap_content"
+    <RelativeLayout
+        android:id="@+id/dateLayout"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="8dp"
-        android:text="fdfafafafd"
+        android:minHeight="48dp"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:padding="8dp"
+            android:layout_centerVertical="true"
+            android:text="Choose Date" />
+
+        <androidx.appcompat.widget.AppCompatSpinner
+            android:id="@+id/statusSpinner"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:padding="8dp" />
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/bankRangeLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="48dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/dateLayout">
+
+        <TextView
+            android:id="@+id/traction"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:padding="8dp"
+            android:layout_centerVertical="true"
+            android:text="Amout" />
+
+        <androidx.appcompat.widget.AppCompatSpinner
+            android:id="@+id/bankSpinner"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:padding="8dp" />
+    </RelativeLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/traction" />
+        app:layout_constraintTop_toBottomOf="@+id/bankRangeLayout" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

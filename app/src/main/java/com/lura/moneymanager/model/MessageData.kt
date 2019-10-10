@@ -1,3 +1,3 @@
 package com.lura.moneymanager.model
 
-class MessageData(var body: String?, var number: String?, var date: String?)
+class MessageData(var title: String?, var status: String?, var amount: String?, var date: String?)

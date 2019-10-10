@@ -23,7 +23,7 @@
             android:textSize="16sp" />
 
         <TextView
-            android:id="@+id/desc"
+            android:id="@+id/status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginLeft="4dp"
@@ -31,7 +31,27 @@
             android:layout_marginRight="4dp"
             android:layout_marginBottom="4dp"
             android:padding="4dp"
-            android:text="Desc" />
+            android:text="Status" />
+        <TextView
+            android:id="@+id/amount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="4dp"
+            android:layout_marginTop="2dp"
+            android:layout_marginRight="4dp"
+            android:layout_marginBottom="4dp"
+            android:padding="4dp"
+            android:text="Amount" />
+        <TextView
+            android:id="@+id/date"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="4dp"
+            android:layout_marginTop="2dp"
+            android:layout_marginRight="4dp"
+            android:layout_marginBottom="4dp"
+            android:padding="4dp"
+            android:text="date" />
     </LinearLayout>
 
 </androidx.cardview.widget.CardView>

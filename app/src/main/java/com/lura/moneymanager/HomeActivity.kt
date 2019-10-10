@@ -2,25 +2,37 @@ package com.lura.moneymanager
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.content.DialogInterface
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.ContactsContract
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.AppCompatSpinner
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lura.moneymanager.adapter.MessageAdapter
+import com.lura.moneymanager.daterangepicker.DateTimeRangePickerActivityRedesign
+import com.lura.moneymanager.daterangepicker.DateTimeRangePickerViewModel
 import com.lura.moneymanager.model.MessageData
+import net.danlew.android.joda.JodaTimeAndroid
+import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.regex.Pattern
@@ -29,8 +41,12 @@ import java.util.regex.Pattern
 class HomeActivity : AppCompatActivity() {
     lateinit var recyclerView: RecyclerView
     lateinit var traction: TextView
+    lateinit var date: TextView
+    private lateinit var bankSpinner: AppCompatSpinner
+    private lateinit var statusSpinner: AppCompatSpinner
 
     var smsFinal = ArrayList<MessageData>()
+    var RQC_PICK_DATE_TIME_RANGE = 101
     private val amountPattern =
         "(?i)(?:(?:RS|INR|MRP)\\.?\\s?)(\\d+(:?\\,\\d+)?(\\,\\d+)?(\\.\\d{1,2})?)"
     private val bankNamePattern =
@@ -42,23 +58,119 @@ class HomeActivity : AppCompatActivity() {
     var tranactionText = ""
     var startDate = "1/9/2019"
     var endDate = "24/9/2019"
+    var bankArrayItem = ""
+    var statusSelcetedItem = ""
+
+    var statusArray = arrayOf(
+        "All",
+        "credited",
+        "debited"
+    )
+
+    var bankArray = arrayOf(
+        "HDFC",
+        "Axis",
+        "ICICI",
+        "CITY",
+        "KOTAK",
+        "IDBI",
+        "INDUSIND",
+        "KARUR",
+        "CANARA",
+        "SBI",
+        "INDIAN"
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        JodaTimeAndroid.init(this)
         recyclerView = findViewById<View>(R.id.recyclerView) as RecyclerView
         traction = findViewById<View>(R.id.traction) as TextView
+        date = findViewById<View>(R.id.date) as TextView
+        bankSpinner = findViewById<View>(R.id.bankSpinner) as AppCompatSpinner
+        statusSpinner = findViewById<View>(R.id.statusSpinner) as AppCompatSpinner
+
+
+        startDate = SimpleDateFormat("dd/MM/yyyy").format(DateTime.now().minusMonths(1).millis)
+        endDate = SimpleDateFormat("dd/MM/yyyy").format(DateTime.now().millis)
+
+        date.text = "Start date: $startDate \n End Date  :$endDate"
+
+        bankSpinner.adapter =
+            ArrayAdapter(this, android.R.layout.simple_list_item_checked, bankArray)
+        statusSpinner.adapter= ArrayAdapter(this, android.R.layout.simple_list_item_checked, statusArray)
 
         recyclerView.layoutManager = LinearLayoutManager(this@HomeActivity)
         if (!checkPermission()) {
             requestPermission(PERMISSION_REQUEST_CODE)
         }
+        bankArrayItem = bankArray[0]
+        statusSelcetedItem = statusArray[0]
+
+        bankSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>,
+                view: View,
+                position: Int,
+                id: Long
+            ) {
+                bankArrayItem = bankArray[position]
+                getMoneyDetails()
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {
+                // Code to perform some action when nothing is selected
+            }
+        }
+
+        statusSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>,
+                view: View,
+                position: Int,
+                id: Long
+            ) {
+                statusSelcetedItem = statusArray[position]
+                getMoneyDetails()
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {
+                // Code to perform some action when nothing is selected
+            }
+        }
+
+    }
+
+    private fun callDatePicker() {
+
+        val intent = DateTimeRangePickerActivityRedesign.newIntent(
+            this,
+            TimeZone.getDefault(),
+            DateTime.now().minusMonths(1).millis,
+            DateTime.now().millis
+        )
+        startActivityForResult(intent, RQC_PICK_DATE_TIME_RANGE)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        val menuInflater = getMenuInflater()
+        menuInflater.inflate(R.menu.date_home_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem?): Boolean {
+        when (item?.itemId) {
+            android.R.id.home -> this.onBackPressed()
+            R.id.date_menu -> callDatePicker()
+        }
+        return true
     }
 
     fun readAllMessage(): ArrayList<MessageData> {
         val uriSMSURI = Uri.parse("content://sms/")
         val cur = contentResolver.query(uriSMSURI, null, null, null, null)!!
-        val format1 = SimpleDateFormat("dd-MM-yyyy")
+        val format1 = SimpleDateFormat("dd/MM/yyyy")
         while (cur.moveToNext()) {
             //String address = cur.getString(cur.getColumnIndex("address"));
             val body = cur.getString(cur.getColumnIndexOrThrow("body"))
@@ -93,16 +205,16 @@ class HomeActivity : AppCompatActivity() {
                 cardName = body.substring(cardMatcher.start(), cardMatcher.end())
             }
 
-            if (!amount.isNullOrEmpty() && !bankName.isNullOrEmpty() && address.contains("HDFCBK") &&
-                isValid(calendar.time) && (body.contains("credited") || body.contains("debited"))
-            ) {
+            if (!amount.isNullOrEmpty() && !bankName.isNullOrEmpty() && address.contains(
+                    bankArrayItem, ignoreCase = true) && isDateValid(calendar.time) &&isStatusValid(body)) {
+
                 val re = Regex("[^0-9.]")
                 var amountDouble = re.replace(amount.replace("Rs.", ""), "")
                 if (body.contains("debited")) {
                     debited += amountDouble.toDouble()
                     tranactionText = "Debited"
                 }
-                if (body.contains("credited")) {
+                if (body.contains("credited") || body.contains("deposited")) {
                     credited += amountDouble.toDouble()
                     tranactionText = "credited"
                 }
@@ -110,14 +222,15 @@ class HomeActivity : AppCompatActivity() {
                     "%.0f",
                     credited
                 ) + "\n Debited Amount " + String.format("%.0f", debited)
-                var bodyText =
-                    "Bank Name  $bankName\n Card Details $cardName \n Status $tranactionText" +
-                            "\n  Amount $amount \n Date " + format1.format(calendar.time)
+                /* var bodyText =
+                     "Bank Name  $bankName\n Card Details $cardName \n Status $tranactionText" +
+                             "\n  Amount $amount \n Date " + format1.format(calendar.time)*/
                 smsFinal.add(
                     MessageData(
-                        bodyText,
                         address,
-                        millis
+                        tranactionText,
+                        amount,
+                        format1.format(calendar.time)
                     )
                 )
             }
@@ -135,7 +248,7 @@ class HomeActivity : AppCompatActivity() {
 
             val hours: Long = Diff(rightnowdate, finaldate)
             Log.d("diff", hours.toString())
-//
+
             if (abs(hours) < 1) {
                 if (name == "" || TextUtils.isEmpty(name)) {
                     name = address
@@ -301,26 +414,43 @@ class HomeActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        getMoneyDetails()
+    }
+
+
+    private fun getMoneyDetails() {
+
         if (!checkPermission()) {
             requestPermission(PERMISSION_REQUEST_CODE)
         } else {
 //            registerReceiver(broadCastReceiver,  IntentFilter("call_method"));
+            //  progress.visibility = View.VISIBLE
+            //recyclerView.visibility = View.GONE
+            smsFinal.clear()
+            debited = 0.0
+            credited = 0.0
+            val messageList: List<MessageData>
 
-            val rightNow = Calendar.getInstance()
-            val hourIn24Format =
-                rightNow.get(Calendar.HOUR_OF_DAY) // return the hour in 24 hrs format (ranging from 0-23)
-            val minutes = rightNow.get(Calendar.MINUTE)
+            messageList = readAllMessage()
+            if (!messageList.isNullOrEmpty()) {
+                val messagecsv = ArrayList<MessageData>()
 
-            val s: List<MessageData>
-            s = readAllMessage()
-            val messagecsv = ArrayList<MessageData>()
+                for (i in messageList.indices) {
+                    messagecsv.add(messageList[i])
+                }
+                Log.d("list", messagecsv.toString())
 
-            for (i in s.indices) {
-                messagecsv.add(s[i])
+                val smsAdapter = MessageAdapter(messagecsv, this)
+                //recyclerView.adapter = null
+                recyclerView.adapter = smsAdapter
+                recyclerView.adapter?.notifyDataSetChanged()
+            } else {
+                debited = 0.0
+                credited = 0.0
+                recyclerView.adapter = null
             }
-            Log.d("list", messagecsv.toString())
-            val smsAdapter = MessageAdapter(messagecsv, this)
-            recyclerView.adapter = smsAdapter
+            // progress.visibility = View.GONE
+            // recyclerView.visibility = View.VISIBLE
         }
     }
 
@@ -338,14 +468,44 @@ class HomeActivity : AppCompatActivity() {
         private val PERMISSION_REQUEST_CODE = 123
     }
 
-    override fun onPause() {
-        super.onPause()
-    }
-
-    fun isValid(giveDate: Date): Boolean {
-        var start = SimpleDateFormat("dd/MM/yyyy").parse(startDate);
-        var end = SimpleDateFormat("dd/MM/yyyy").parse(endDate);
+    private fun isDateValid(giveDate: Date): Boolean {
+        var start = SimpleDateFormat("dd/MM/yyyy").parse(startDate)
+        var end = SimpleDateFormat("dd/MM/yyyy").parse(endDate)
         return giveDate.after(start) && giveDate.before(end)
     }
+
+    private fun isStatusValid(body: String): Boolean {
+        return if (statusSelcetedItem.isNullOrEmpty() || statusSelcetedItem.contains("All")) {
+            (body.contains("deposited") || body.contains("credited") || body.contains("debited"))
+        } else {
+            if (statusSelcetedItem.contains("debited")) {
+                body.contains("debited")
+            } else {
+                (body.contains("deposited") || body.contains("credited"))
+            }
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == Activity.RESULT_OK && requestCode == RQC_PICK_DATE_TIME_RANGE) {
+
+            val startTime =
+                data?.getLongExtra(DateTimeRangePickerViewModel.KEY_START_TIME_IN_MILLIS, 0L)
+            val endTime =
+                data?.getLongExtra(DateTimeRangePickerViewModel.KEY_END_TIME_IN_MILLIS, 0L)
+            val timeZone = data?.getStringExtra(DateTimeRangePickerViewModel.KEY_TIME_ZONE)
+
+            startDate = DateTimeFormat.forPattern("dd/MM/yyyy").withLocale(Locale.getDefault())
+                .print(startTime!!)
+            endDate = DateTimeFormat.forPattern("dd/MM/yyyy").withLocale(Locale.getDefault())
+                .print(endTime!!)
+            date.text = "Start date: $startDate \n End Date  :$endDate"
+
+            getMoneyDetails()
+        }
+
+    }
+
 }
 

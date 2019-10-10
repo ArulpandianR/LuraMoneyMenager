@@ -22,6 +22,9 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".daterangepicker.DateTimeRangePickerActivityRedesign"
+            android:theme="@style/NoTitleTheme"/>
+
     </application>
 
 </manifest>
