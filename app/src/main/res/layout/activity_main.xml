@@ -17,17 +17,17 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
-            android:padding="8dp"
             android:layout_centerVertical="true"
+            android:padding="8dp"
             android:text="Choose Date" />
 
         <androidx.appcompat.widget.AppCompatSpinner
             android:id="@+id/statusSpinner"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
             android:layout_alignParentRight="true"
             android:layout_centerVertical="true"
+            android:gravity="center_vertical"
             android:padding="8dp" />
     </RelativeLayout>
 
@@ -44,34 +44,38 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
-            android:padding="8dp"
             android:layout_centerVertical="true"
+            android:padding="8dp"
             android:text="Amout" />
 
         <androidx.appcompat.widget.AppCompatSpinner
             android:id="@+id/bankSpinner"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
             android:layout_alignParentRight="true"
             android:layout_centerVertical="true"
+            android:gravity="center_vertical"
+            android:indeterminateTint="#666666"
             android:padding="8dp" />
     </RelativeLayout>
 
-    <ProgressBar
-        android:id="@+id/progressBar"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@+id/bankRangeLayout"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerView"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/bankRangeLayout" />
+        app:layout_constraintTop_toBottomOf="@+id/bankRangeLayout">
 
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:visibility="gone" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="visible" />
+    </FrameLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

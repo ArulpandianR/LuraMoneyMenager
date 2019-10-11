@@ -277,6 +277,8 @@ class HomeActivity : AppCompatActivity(), CoroutineScope {
         } else {
 
             launch {
+                progressBar.visibility = View.VISIBLE
+                recyclerView.visibility = View.GONE
                 val messageList: MutableList<MessageData>
 
                 var messageDataResponse: MessageDataResponse = withContext(Dispatchers.IO) {
@@ -286,11 +288,6 @@ class HomeActivity : AppCompatActivity(), CoroutineScope {
                     )
                 }
                 recyclerView.adapter = null
-                progressBar.visibility = View.VISIBLE
-                recyclerView.visibility = View.GONE
-
-                progressBar.visibility = View.GONE
-                recyclerView.visibility = View.VISIBLE
                 messageList = messageDataResponse.messageList
 
                 if (!messageList.isNullOrEmpty()) {
@@ -317,7 +314,10 @@ class HomeActivity : AppCompatActivity(), CoroutineScope {
                     recyclerView.adapter = null
                     traction.text = ""
                 }
+                progressBar.visibility = View.GONE
+                recyclerView.visibility = View.VISIBLE
             }
+
         }
     }
 
