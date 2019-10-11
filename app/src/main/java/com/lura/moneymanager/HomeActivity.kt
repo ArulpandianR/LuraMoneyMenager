@@ -15,10 +15,7 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatSpinner
@@ -27,44 +24,44 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.lura.moneymanager.adapter.MessageAdapter
+import com.lura.moneymanager.coroutines.MessageService
 import com.lura.moneymanager.daterangepicker.DateTimeRangePickerActivityRedesign
 import com.lura.moneymanager.daterangepicker.DateTimeRangePickerViewModel
 import com.lura.moneymanager.model.MessageData
+import com.lura.moneymanager.model.MessageDataResponse
+import kotlinx.coroutines.*
 import net.danlew.android.joda.JodaTimeAndroid
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.regex.Pattern
+import kotlin.coroutines.CoroutineContext
 
 
-class HomeActivity : AppCompatActivity() {
+class HomeActivity : AppCompatActivity(), CoroutineScope {
     lateinit var recyclerView: RecyclerView
+    lateinit var progressBar: ProgressBar
     lateinit var traction: TextView
     lateinit var date: TextView
     private lateinit var bankSpinner: AppCompatSpinner
     private lateinit var statusSpinner: AppCompatSpinner
-
-    var smsFinal = ArrayList<MessageData>()
     var RQC_PICK_DATE_TIME_RANGE = 101
-    private val amountPattern =
-        "(?i)(?:(?:RS|INR|MRP)\\.?\\s?)(\\d+(:?\\,\\d+)?(\\,\\d+)?(\\.\\d{1,2})?)"
-    private val bankNamePattern =
-        "(?i)(?:\\sat\\s|on\\s|in\\*)([A-Za-z0-9]*\\s?-?\\s?[A-Za-z0-9]*\\s?-?\\.?)"
-    private val cardDetailPattern =
-        "(?i)(?:\\smade on|ur|made a\\s|in\\*)([A-Za-z]*\\s?-?\\s[A-Za-z]*\\s?-?\\s[A-Za-z]*\\s?-?)"
-    var debited = 0.0
-    var credited = 0.0
-    var tranactionText = ""
+
     var startDate = "1/9/2019"
     var endDate = "24/9/2019"
-    var bankArrayItem = ""
+    var bankSeletedItem = ""
     var statusSelcetedItem = ""
+    override val coroutineContext: CoroutineContext
+        get() = Dispatchers.Main + job
+
+    private lateinit var job: Job
+
+    private val messageService = MessageService()
 
     var statusArray = arrayOf(
         "All",
-        "credited",
-        "debited"
+        "Credited",
+        "Debited"
     )
 
     var bankArray = arrayOf(
@@ -90,7 +87,8 @@ class HomeActivity : AppCompatActivity() {
         date = findViewById<View>(R.id.date) as TextView
         bankSpinner = findViewById<View>(R.id.bankSpinner) as AppCompatSpinner
         statusSpinner = findViewById<View>(R.id.statusSpinner) as AppCompatSpinner
-
+        progressBar = findViewById<View>(R.id.progressBar) as ProgressBar
+        job = Job()
 
         startDate = SimpleDateFormat("dd/MM/yyyy").format(DateTime.now().minusMonths(1).millis)
         endDate = SimpleDateFormat("dd/MM/yyyy").format(DateTime.now().millis)
@@ -99,13 +97,14 @@ class HomeActivity : AppCompatActivity() {
 
         bankSpinner.adapter =
             ArrayAdapter(this, android.R.layout.simple_list_item_checked, bankArray)
-        statusSpinner.adapter= ArrayAdapter(this, android.R.layout.simple_list_item_checked, statusArray)
+        statusSpinner.adapter =
+            ArrayAdapter(this, android.R.layout.simple_list_item_checked, statusArray)
 
         recyclerView.layoutManager = LinearLayoutManager(this@HomeActivity)
         if (!checkPermission()) {
             requestPermission(PERMISSION_REQUEST_CODE)
         }
-        bankArrayItem = bankArray[0]
+        bankSeletedItem = bankArray[0]
         statusSelcetedItem = statusArray[0]
 
         bankSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -115,7 +114,7 @@ class HomeActivity : AppCompatActivity() {
                 position: Int,
                 id: Long
             ) {
-                bankArrayItem = bankArray[position]
+                bankSeletedItem = bankArray[position]
                 getMoneyDetails()
             }
 
@@ -165,153 +164,6 @@ class HomeActivity : AppCompatActivity() {
             R.id.date_menu -> callDatePicker()
         }
         return true
-    }
-
-    fun readAllMessage(): ArrayList<MessageData> {
-        val uriSMSURI = Uri.parse("content://sms/")
-        val cur = contentResolver.query(uriSMSURI, null, null, null, null)!!
-        val format1 = SimpleDateFormat("dd/MM/yyyy")
-        while (cur.moveToNext()) {
-            //String address = cur.getString(cur.getColumnIndex("address"));
-            val body = cur.getString(cur.getColumnIndexOrThrow("body"))
-            val address = cur.getString(cur.getColumnIndexOrThrow("address"))
-            val millis = cur.getString(cur.getColumnIndexOrThrow("date"))
-            var name: String = ""//getContactName(address, this)
-
-            val timestamp = java.lang.Long.parseLong(millis)
-            val calendar = Calendar.getInstance()
-            calendar.timeInMillis = timestamp
-            Log.d("date", calendar.toString())
-
-            var amount = ""
-            var bankName = ""
-            var cardName = ""
-
-            var amountPattern: Pattern = Pattern.compile(amountPattern)
-            val amountMatcher = amountPattern.matcher(body)
-            if (amountMatcher.find()) {
-                amount = body.substring(amountMatcher.start(), amountMatcher.end())
-            }
-
-            var bankPattern: Pattern = Pattern.compile(bankNamePattern)
-            val bankMatcher = bankPattern.matcher(body)
-            if (bankMatcher.find()) {
-                bankName = body.substring(bankMatcher.start(), bankMatcher.end())
-            }
-
-            var cardPattern: Pattern = Pattern.compile(cardDetailPattern)
-            val cardMatcher = cardPattern.matcher(body)
-            if (cardMatcher.find()) {
-                cardName = body.substring(cardMatcher.start(), cardMatcher.end())
-            }
-
-            if (!amount.isNullOrEmpty() && !bankName.isNullOrEmpty() && address.contains(
-                    bankArrayItem, ignoreCase = true) && isDateValid(calendar.time) &&isStatusValid(body)) {
-
-                val re = Regex("[^0-9.]")
-                var amountDouble = re.replace(amount.replace("Rs.", ""), "")
-                if (body.contains("debited")) {
-                    debited += amountDouble.toDouble()
-                    tranactionText = "Debited"
-                }
-                if (body.contains("credited") || body.contains("deposited")) {
-                    credited += amountDouble.toDouble()
-                    tranactionText = "credited"
-                }
-                traction.text = "Credited Amount " + String.format(
-                    "%.0f",
-                    credited
-                ) + "\n Debited Amount " + String.format("%.0f", debited)
-                /* var bodyText =
-                     "Bank Name  $bankName\n Card Details $cardName \n Status $tranactionText" +
-                             "\n  Amount $amount \n Date " + format1.format(calendar.time)*/
-                smsFinal.add(
-                    MessageData(
-                        address,
-                        tranactionText,
-                        amount,
-                        format1.format(calendar.time)
-                    )
-                )
-            }
-            /*val timestamp = java.lang.Long.parseLong(millis)
-            val calendar = Calendar.getInstance()
-            calendar.timeInMillis = timestamp
-            val finaldate = calendar.time
-            Log.d("date", finaldate.toString())
-
-
-            val rightNow = Calendar.getInstance()
-            val rightnowdate: Date = rightNow.time
-            Log.d("date", rightnowdate.toString())
-
-
-            val hours: Long = Diff(rightnowdate, finaldate)
-            Log.d("diff", hours.toString())
-
-            if (abs(hours) < 1) {
-                if (name == "" || TextUtils.isEmpty(name)) {
-                    name = address
-                }
-                smsZero.add(MessageData(body, name, hours))
-            }
-            if (abs(hours) < 2 && abs(hours) >= 1) {
-                if (name == "" || TextUtils.isEmpty(name)) {
-                    name = address
-                }
-                smsOne.add(MessageData(body, name, hours))
-            }
-            if (abs(hours) < 3 && abs(hours) >= 2) {
-                if (name == "" || TextUtils.isEmpty(name)) {
-                    name = address
-                }
-                smsTwo.add(MessageData(body, name, hours))
-            }
-            if (abs(hours) < 6 && abs(hours) >= 3) {
-                if (name == "" || TextUtils.isEmpty(name)) {
-                    name = address
-                }
-                smsThree.add(MessageData(body, name, hours))
-            }
-            if (abs(hours) < 12 && abs(hours) >= 6) {
-                if (name == "" || TextUtils.isEmpty(name)) {
-                    name = address
-                }
-                smsSix.add(MessageData(body, name, hours))
-            }
-            if (abs(hours) < 24 && abs(hours) >= 12) {
-                if (name == "" || TextUtils.isEmpty(name)) {
-                    name = address
-                }
-                smsTwelve.add(MessageData(body, name, hours))
-            }
-            if (abs(hours) >= 24 && abs(hours) < 36) {
-                if (name == "" || TextUtils.isEmpty(name)) {
-                    name = address
-                }
-                smsDay.add(MessageData(body, name, hours))
-            }*/
-        }
-        /*  smsFinal.add(MessageData("", "0 hours ago", 0))
-          smsFinal.addAll(smsZero)
-          smsFinal.add(MessageData("", "1 hours ago", 1))
-          smsFinal.addAll(smsOne)
-          smsFinal.add(MessageData("", "2 hours ago", 2))
-          smsFinal.addAll(smsTwo)
-          smsFinal.add(MessageData("", "3 hours ago", 3))
-          smsFinal.addAll(smsThree)
-          smsFinal.add(MessageData("", "6 hours ago", 6))
-          smsFinal.addAll(smsSix)
-          smsFinal.add(MessageData("", "12 hours ago", 12))
-          smsFinal.addAll(smsTwelve)
-          smsFinal.add(MessageData("", "1 Day ago", 24))
-          smsFinal.addAll(smsDay)*/
-        return smsFinal
-    }
-
-    fun Diff(date1: Date, date2: Date): Long {
-        val mill_to_hour: Int = 1000 * 60 * 60
-        return (date1.time - date2.time) / mill_to_hour
     }
 
     fun checkPermission(): Boolean {
@@ -423,34 +275,49 @@ class HomeActivity : AppCompatActivity() {
         if (!checkPermission()) {
             requestPermission(PERMISSION_REQUEST_CODE)
         } else {
-//            registerReceiver(broadCastReceiver,  IntentFilter("call_method"));
-            //  progress.visibility = View.VISIBLE
-            //recyclerView.visibility = View.GONE
-            smsFinal.clear()
-            debited = 0.0
-            credited = 0.0
-            val messageList: List<MessageData>
 
-            messageList = readAllMessage()
-            if (!messageList.isNullOrEmpty()) {
-                val messagecsv = ArrayList<MessageData>()
+            launch {
+                val messageList: MutableList<MessageData>
 
-                for (i in messageList.indices) {
-                    messagecsv.add(messageList[i])
+                var messageDataResponse: MessageDataResponse = withContext(Dispatchers.IO) {
+                    messageService.readAllMessage(
+                        this@HomeActivity,
+                        startDate, endDate, bankSeletedItem, statusSelcetedItem
+                    )
                 }
-                Log.d("list", messagecsv.toString())
-
-                val smsAdapter = MessageAdapter(messagecsv, this)
-                //recyclerView.adapter = null
-                recyclerView.adapter = smsAdapter
-                recyclerView.adapter?.notifyDataSetChanged()
-            } else {
-                debited = 0.0
-                credited = 0.0
                 recyclerView.adapter = null
+                progressBar.visibility = View.VISIBLE
+                recyclerView.visibility = View.GONE
+
+                progressBar.visibility = View.GONE
+                recyclerView.visibility = View.VISIBLE
+                messageList = messageDataResponse.messageList
+
+                if (!messageList.isNullOrEmpty()) {
+                    val messagecsv = ArrayList<MessageData>()
+
+                    for (i in messageList.indices) {
+                        messagecsv.add(messageList[i])
+                    }
+                    Log.d("list", messagecsv.toString())
+
+                    val smsAdapter = MessageAdapter(messagecsv, this@HomeActivity)
+                    //recyclerView.adapter = null
+                    recyclerView.adapter = smsAdapter
+                    recyclerView.adapter?.notifyDataSetChanged()
+
+                    traction.text = "Credited Amount " + String.format(
+                        "%.0f",
+                        messageDataResponse.creditedAmount
+                    ) + "\n Debited Amount " + String.format(
+                        "%.0f",
+                        messageDataResponse.debittedAmount
+                    )
+                } else {
+                    recyclerView.adapter = null
+                    traction.text = ""
+                }
             }
-            // progress.visibility = View.GONE
-            // recyclerView.visibility = View.VISIBLE
         }
     }
 
@@ -468,23 +335,6 @@ class HomeActivity : AppCompatActivity() {
         private val PERMISSION_REQUEST_CODE = 123
     }
 
-    private fun isDateValid(giveDate: Date): Boolean {
-        var start = SimpleDateFormat("dd/MM/yyyy").parse(startDate)
-        var end = SimpleDateFormat("dd/MM/yyyy").parse(endDate)
-        return giveDate.after(start) && giveDate.before(end)
-    }
-
-    private fun isStatusValid(body: String): Boolean {
-        return if (statusSelcetedItem.isNullOrEmpty() || statusSelcetedItem.contains("All")) {
-            (body.contains("deposited") || body.contains("credited") || body.contains("debited"))
-        } else {
-            if (statusSelcetedItem.contains("debited")) {
-                body.contains("debited")
-            } else {
-                (body.contains("deposited") || body.contains("credited"))
-            }
-        }
-    }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -506,6 +356,12 @@ class HomeActivity : AppCompatActivity() {
         }
 
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        job.cancel()
+    }
+
 
 }
 
