@@ -4,4 +4,6 @@
     <string name="dateTimeRangePickerDoneText">Done</string>
     <string name="dateTimeRangePickerStartText">Start Date</string>
     <string name="dateTimeRangePickerEndText">End Date</string>
+    <string name="credited_text">Credited Amount</string>
+    <string name="debited_text"> \n Debited Amount</string>
 </resources>

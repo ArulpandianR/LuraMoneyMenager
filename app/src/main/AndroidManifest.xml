@@ -14,7 +14,9 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <activity android:name=".HomeActivity">
+        <activity
+            android:name=".HomeActivity"
+            android:theme="@style/NoTitleTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -22,8 +24,9 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".daterangepicker.DateTimeRangePickerActivityRedesign"
-            android:theme="@style/NoTitleTheme"/>
+        <activity
+            android:name=".daterangepicker.DateTimeRangePickerActivityRedesign"
+            android:theme="@style/NoTitleTheme" />
 
     </application>
 

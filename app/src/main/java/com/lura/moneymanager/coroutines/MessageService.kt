@@ -34,6 +34,8 @@ class MessageService {
         val cur = activity.contentResolver.query(uriSMSURI, null, null, null, null)!!
         val format1 = SimpleDateFormat("dd/MM/yyyy")
         smsFinal.clear()
+        debited = 0.0
+        credited = 0.0
         while (cur.moveToNext()) {
             //String address = cur.getString(cur.getColumnIndex("address"));
             val body = cur.getString(cur.getColumnIndexOrThrow("body"))
@@ -105,7 +107,7 @@ class MessageService {
             }
         }
 
-        return MessageDataResponse(smsFinal, debited, credited)
+        return MessageDataResponse(smsFinal, credited,debited)
     }
 
 
@@ -116,13 +118,23 @@ class MessageService {
     }
 
     private fun isStatusValid(body: String, statusSelcetedItem: String): Boolean {
-        return if (statusSelcetedItem.isNullOrEmpty() || statusSelcetedItem.contains("All",ignoreCase = true)) {
-            (body.contains("deposited",ignoreCase = true) || body.contains("credited",ignoreCase = true) || body.contains("debited",ignoreCase = true))
+        return if (statusSelcetedItem.isNullOrEmpty() || statusSelcetedItem.contains(
+                "All",
+                ignoreCase = true
+            )
+        ) {
+            (body.contains("deposited", ignoreCase = true) || body.contains(
+                "credited",
+                ignoreCase = true
+            ) || body.contains("debited", ignoreCase = true))
         } else {
-            if (statusSelcetedItem.contains("debited",ignoreCase = true)) {
-                body.contains("debited",ignoreCase = true)
+            if (statusSelcetedItem.contains("debited", ignoreCase = true)) {
+                body.contains("debited", ignoreCase = true)
             } else {
-                (body.contains("deposited",ignoreCase = true) || body.contains("credited",ignoreCase = true))
+                (body.contains("deposited", ignoreCase = true) || body.contains(
+                    "credited",
+                    ignoreCase = true
+                ))
             }
         }
     }

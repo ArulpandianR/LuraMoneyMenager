@@ -107,6 +107,7 @@ class HomeActivity : AppCompatActivity(), CoroutineScope {
         bankSeletedItem = bankArray[0]
         statusSelcetedItem = statusArray[0]
 
+
         bankSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(
                 parent: AdapterView<*>,
@@ -303,10 +304,10 @@ class HomeActivity : AppCompatActivity(), CoroutineScope {
                     recyclerView.adapter = smsAdapter
                     recyclerView.adapter?.notifyDataSetChanged()
 
-                    traction.text = "Credited Amount " + String.format(
+                    traction.text = getString(R.string.credited_text) + String.format(
                         "%.0f",
                         messageDataResponse.creditedAmount
-                    ) + "\n Debited Amount " + String.format(
+                    ) + getString(R.string.debited_text) + String.format(
                         "%.0f",
                         messageDataResponse.debittedAmount
                     )
